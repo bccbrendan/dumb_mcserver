@@ -1,0 +1,88 @@
+#!/bin/bash
+#
+#	/etc/rc.d/init.d/dumb_mcserver
+#
+# Starts a minecraft server
+#
+# chkconfig: 2345 95 05
+# description: start and stop a Minecraft server
+# processname: dumb_mcserver
+
+### BEGIN INIT INFO
+# Provides: dumb_mcserver
+# Required-Start: $syslog $local_fs
+# Required-Stop: $syslog $local_fs
+# Default-Start:  2 3 4 5
+# Default-Stop: 0 1 2 6
+# Short-Description: start and stop Minecraft server 
+# Description: start and stop Minecraft server 
+### END INIT INFO
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+RETVAL=0
+
+#
+# See how we were called.
+#
+
+start() {
+	/usr/bin/tmux new-session -s minecraft -d
+	tmux send -t minecraft "java -Xmx1024M -Xms1024M -jar ~/minecraft_server/minecraft_server.jar nogui > ~/minecraft_server/minecraft.log" ENTER
+	return $RETVAL
+}
+
+stop() {
+	echo -n $"Stopping Minecraft server:"
+	/usr/bin/tmux send -t minecraft /say "The server will shut down in 10 seconds" ENTER
+	sleep 10
+	/usr/bin/tmux send -t minecraft /save-all ENTER
+	/usr/bin/tmux send -t minecraft /stop ENTER
+	/usr/bin/tmux kill-session -t minecraft
+
+	return $RETVAL
+}
+
+
+restart() {
+	stop
+	start
+}	
+
+reload() {
+
+	
+	trap "" SIGHUP
+	action $"Reloading dumb_mcserver daemon:" killall -HUP dumb_mcserver
+	RETVAL=$?
+	return $RETVAL
+}	
+
+case "$1" in
+start)
+	start
+	;;
+stop)
+	stop
+	;;
+reload)
+	reload
+	;;
+force-reload)
+	echo "$0: Unimplemented feature."
+	RETVAL=3
+	;;
+restart)
+	restart
+	;;
+status)
+	status dumb_mcserver
+	RETVAL=$?
+	;;
+*)
+	echo $"Usage: $0 {start|stop|status|restart|condrestart|reload|force-reload}"
+	RETVAL=2
+esac
+
+exit $RETVAL
